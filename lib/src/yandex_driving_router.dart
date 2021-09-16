@@ -43,27 +43,35 @@ class YandexDrivingRouter {
                 longitude: resultPoint['longitude'],
               ))
           .toList();
-      final dynamic weight = map['metadata']['weight'];
-      final metadata = DrivingSectionMetadata(
-        DrivingWeight(
-          LocalizedValue(
-            weight['time']['value'],
-            weight['time']['text'],
-          ),
-          LocalizedValue(
-            weight['timeWithTraffic']['value'],
-            weight['timeWithTraffic']['text'],
-          ),
-          LocalizedValue(
-            weight['distance']['value'],
-            weight['distance']['text'],
-          ),
-        ),
-      );
-      return DrivingRoute(points, metadata);
+      final metadata = _drivingSectionMetadata(map['metadata']);
+      final List<dynamic> waypointsData = map['waypointsMetadata'];
+      final waypointsMetadata = waypointsData.map((dynamic waypointData){
+        return _drivingSectionMetadata(waypointData);
+      }).toList();
+
+      return DrivingRoute(points, metadata, waypointsMetadata);
     }).toList();
 
     return DrivingSessionResult(routes, error);
+  }
+
+  static DrivingSectionMetadata _drivingSectionMetadata(Map<dynamic, dynamic> metadata) {
+    return DrivingSectionMetadata(
+      DrivingWeight(
+        LocalizedValue(
+          metadata['weight']['time']['value'],
+          metadata['weight']['time']['text'],
+        ),
+        LocalizedValue(
+          metadata['weight']['timeWithTraffic']['value'],
+          metadata['weight']['timeWithTraffic']['text'],
+        ),
+        LocalizedValue(
+          metadata['weight']['distance']['value'],
+          metadata['weight']['distance']['text'],
+        ),
+      ),
+    );
   }
 
   static Future<void> _cancelSession(int sessionId) async {

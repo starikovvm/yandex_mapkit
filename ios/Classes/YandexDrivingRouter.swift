@@ -61,13 +61,19 @@ public class YandexDrivingRouter: NSObject, FlutterPlugin {
                     let resultpoints: [[String: Any]] = route.geometry.points.map { (point) -> [String: Any] in
                         return ["latitude": point.latitude, "longitude": point.longitude]
                     }
-                    let weight: [String: Any] = [
-                        "time": self.localizedValueData(route.metadata.weight.time),
-                        "timeWithTraffic": self.localizedValueData(route.metadata.weight.timeWithTraffic),
-                        "distance": self.localizedValueData(route.metadata.weight.distance)
+                    let metadata: [String: Any] = ["weight": self.weightData(route.metadata.weight)]
+
+                    let waypointsMetadata: [[String: Any]] = route.wayPoints.map { position -> [String: Any] in
+                        let metadata = route.metadataAt(with: position)
+                        return ["weight": self.weightData(metadata.weight)]
+                    }
+
+                    let resultRoute: [String: Any] = [
+                        "geometry": resultpoints,
+                        "metadata": metadata,
+                        "waypointsMetadata": waypointsMetadata
                     ]
-                    let metadata: [String: Any] = ["weight": weight]
-                    let resultRoute: [String: Any] = ["geometry": resultpoints, "metadata": metadata]
+
                     return resultRoute
                 }
             result(["routes": resultRoutes])
@@ -97,6 +103,14 @@ public class YandexDrivingRouter: NSObject, FlutterPlugin {
             pointType = YMKRequestPointType.waypoint
         }
         return YMKRequestPoint(point: point, type: pointType, pointContext: nil)
+    }
+
+    private func weightData(_ weight: YMKDrivingWeight) -> [String: Any] {
+        [
+            "time": localizedValueData(weight.time),
+            "timeWithTraffic": localizedValueData(weight.timeWithTraffic),
+            "distance": localizedValueData(weight.distance)
+        ]
     }
 
     private func localizedValueData(_ value: YMKLocalizedValue) -> [String: Any?] {

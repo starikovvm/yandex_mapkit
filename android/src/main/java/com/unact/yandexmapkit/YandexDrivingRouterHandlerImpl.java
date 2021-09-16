@@ -16,6 +16,8 @@ import com.yandex.mapkit.directions.driving.DrivingSession;
 import com.yandex.mapkit.directions.driving.DrivingSession.DrivingRouteListener;
 import com.yandex.mapkit.directions.driving.VehicleOptions;
 import com.yandex.mapkit.directions.driving.Weight;
+import com.yandex.mapkit.directions.driving.DrivingRouteMetadata;
+import com.yandex.mapkit.geometry.PolylinePosition;
 import com.yandex.mapkit.geometry.Point;
 import com.yandex.runtime.Error;
 
@@ -61,12 +63,8 @@ public class YandexDrivingRouterHandlerImpl implements MethodCallHandler {
         final Integer sessionId = (Integer) params.get("sessionId");
         final List<RequestPoint> points = requestPoints(pointsParams);
 
-        final DrivingSession session = drivingRouter.requestRoutes(
-                points,
-                new DrivingOptions(),
-                new VehicleOptions(),
-                new DrivingRouteListenerImpl(sessionId, result)
-        );
+        final DrivingSession session = drivingRouter.requestRoutes(points, new DrivingOptions(), new VehicleOptions(),
+                new DrivingRouteListenerImpl(sessionId, result));
         sessions.put(sessionId, session);
     }
 
@@ -93,6 +91,14 @@ public class YandexDrivingRouterHandlerImpl implements MethodCallHandler {
         Map<String, Object> result = new HashMap<>();
         result.put("value", value.getValue());
         result.put("text", value.getText());
+        return result;
+    }
+
+    private Map<String, Object> weightData(Weight value) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("time", localizedValueData(value.getTime()));
+        result.put("timeWithTraffic", localizedValueData(value.getTimeWithTraffic()));
+        result.put("distance", localizedValueData(value.getDistance()));
         return result;
     }
 
@@ -133,15 +139,19 @@ public class YandexDrivingRouterHandlerImpl implements MethodCallHandler {
                 }
                 resultRoute.put("geometry", resultPoints);
 
-                Weight weight = route.getMetadata().getWeight();
-                Map<String, Object> resultWeight = new HashMap<>();
-                resultWeight.put("time", localizedValueData(weight.getTime()));
-                resultWeight.put("timeWithTraffic", localizedValueData(weight.getTimeWithTraffic()));
-                resultWeight.put("distance", localizedValueData(weight.getDistance()));
-
+                Map<String, Object> resultWeight = weightData(route.getMetadata().getWeight());
                 Map<String, Object> resultMetadata = new HashMap<>();
                 resultMetadata.put("weight", resultWeight);
                 resultRoute.put("metadata", resultMetadata);
+
+                List<Map<String, Object>> waypointsMetadata = new ArrayList<>();
+                for (PolylinePosition position : route.getWayPoints()) {
+                    DrivingRouteMetadata metadata = route.metadataAt(position);
+                    Map<String, Object> positionMetadata = new HashMap<>();
+                    positionMetadata.put("weight", weightData(metadata.getWeight()));
+                    waypointsMetadata.add(positionMetadata);
+                }
+                resultRoute.put("waypointsMetadata", waypointsMetadata);
 
                 resultRoutes.add(resultRoute);
             }
